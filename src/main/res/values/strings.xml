@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Wifi密码查询器</string>
+    <string name="welcome_message">Hello!</string>
+</resources>
