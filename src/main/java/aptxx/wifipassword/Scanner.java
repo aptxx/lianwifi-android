@@ -63,13 +63,14 @@ public class Scanner {
         @Override
         public synchronized void run() {
             scannerState = 1; // running
-            sendMessageToUI("", 'w');
+            sendMessageToUI("", 'w'); // clear textView
             sendMessageToUI("Scanning..\n\n", 'a');
 
             checkWifiOn();
             List<ScanResult> wifis = mainActivity.wifiManager.getScanResults();
             if ( wifis.isEmpty() ) {
                 sendMessageToUI("（/TДT)/ 搜索不到附近的wifi,你的手机在荒野迷失了..\n", 'w');
+                scannerState = 0;
                 return ;
             }
 
@@ -83,51 +84,52 @@ public class Scanner {
                 ssids = ssids + "," + wifi.SSID;
                 wifiLevel.put(wifi.BSSID, wifi.level);
             }
+
+            // request
             String result = queryPassword(bssids, ssids, dhid, ii, mac, retSn);
             try {
                 JSONObject data = new JSONObject(result);
                 retSn = data.getString("retSn");
-                if (data.getInt("retCd") != 0 || data.getJSONObject("qryapwd").getInt("retCd") != 0 ) { // error
-                    if(data.getInt("retCd") !=0 )
-                        sendMessageToUI("Message: " + data.getString("retMsg")+ "\n", 'a');
-                    if(data.getJSONObject("qryapwd").getInt("retCd") != 0)
-                        sendMessageToUI("Message: " + data.getJSONObject("qryapwd").getString("retMsg") + "\n\n", 'a');
-
-                    dhidState = 1;
-                    retSnState = 1;
-                    scannerState = 0;
-                    return ;
+                if(data.getInt("retCd") != 0) {
+                    throw new Exception(data.getString("retMsg"));
                 }
+                if(data.getJSONObject("qryapwd").getInt("retCd") != 0) {
+                    throw new Exception(data.getJSONObject("qryapwd").getString("retMsg"));
+                }
+
                 JSONObject psws = data.getJSONObject("qryapwd").getJSONObject("psws");
+
                 // query success but no password found
                 if (psws.length() <= 0) {
                     sendMessageToUI("没有可用wifi,真是遗憾..\n" ,'a');
-                    scannerState = 0;
                     return;
                 }
                 // found
                 Iterator<String> keys = psws.keys();
                 while(keys.hasNext()) {
                     JSONObject wf = psws.getJSONObject(keys.next());
-                    StringBuilder sb = new StringBuilder();
+                    StringBuilder sb = new StringBuilder(); // string that sent to UI
                     int level = Integer.parseInt( wifiLevel.get(wf.getString("bssid")).toString() );
                     sb.append("SSID: " + wf.getString("ssid") + " (" + wf.getString("bssid") +") - Level:"+ level + "\n");
                     sb.append("Password: " + decryptPassword(wf.getString("pwd")) + "\n");
+
                     // xUser & xPwd
-                    if (wf.getString("xUser") == "") {
+                    if (! wf.getString("xUser").isEmpty()) {
                         sb.append("xUser: " + wf.getString("xUser") + "\n");
                         sb.append("xPwd:" + wf.getString("xPwd") + "\n");
                     }
+
+                    // update UI
                     sb.append("\n");
                     sendMessageToUI(sb.toString(), 'a');
                 }
             } catch (Exception e) { // exception
-                sendMessageToUI("Sorry! Try again please..(" + e.toString() + ")\n", 'a');
                 dhidState = 1;
                 retSnState = 1;
+                sendMessageToUI(e.getMessage() + "\nSorry! Try again please..\n", 'a');
+            } finally {
+                scannerState = 0; // scanner finished
             }
-
-            scannerState = 0; // scanner finished
         }
     };
 
