@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -84,9 +85,12 @@ public class Scanner {
                 ssids = ssids + "," + wifi.SSID;
                 wifiLevel.put(wifi.BSSID, wifi.level);
             }
-
-            // request
+            // clear left ','
+            bssids = bssids.substring(1, bssids.length());
+            ssids = ssids.substring(1, ssids.length());
+            // make request
             String result = queryPassword(bssids, ssids, dhid, ii, mac, retSn);
+            // handle result
             try {
                 JSONObject data = new JSONObject(result);
                 retSn = data.getString("retSn");
@@ -235,7 +239,11 @@ public class Scanner {
         if(! iter.hasNext()) return "";
         while (true) {
             key = iter.next().toString();
-            urlParametersBuilder.append(key + "=" + data.get(key).toString());
+            try {
+                urlParametersBuilder.append(URLEncoder.encode(key, "UTF-8") + "=" + URLEncoder.encode(data.get(key).toString(), "UTF-8"));
+            } catch (Exception e) {
+                urlParametersBuilder.append(key + "=" + data.get(key).toString());
+            }
             if(iter.hasNext()){
                 urlParametersBuilder.append("&");
                 continue;
@@ -250,9 +258,9 @@ public class Scanner {
 
             HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
             urlConnection.setRequestProperty("User-Agent", userAgent);
+            urlConnection.setRequestMethod("POST");
             urlConnection.setDoOutput(true);
             urlConnection.setDoInput(true);
-            urlConnection.getOutputStream();
             OutputStream out = new BufferedOutputStream(urlConnection.getOutputStream());
             out.write(urlParameters.getBytes());
             out.close();
