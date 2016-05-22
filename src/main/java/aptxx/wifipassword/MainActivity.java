@@ -14,7 +14,7 @@ import android.widget.TextView;
 
 /*
     wifi密码查询器
-    Github:https://github.com/prestorpan/lianwifi-android
+    Github:https://github.com/aptxx/lianwifi-android.git
  */
 public class MainActivity extends AppCompatActivity {
     // view
